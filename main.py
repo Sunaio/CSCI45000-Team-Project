@@ -1,30 +1,16 @@
 from model import Model
 
-# Use main for testing currently
 def main():
-    """
-    model_url = "https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Thinking"
-    
-    # Create model instance
-    model = Model(model_url)
-    
-    print(f"Model name: {model.name}")
-    print(f"Model category: {model.category}")
-    
-    # Fetch Hugging Face metadata
-    print("\nFetching Hugging Face metadata...")
-    model.fetch_huggingface_metadata()
-    print("HF Metadata:")
-    
-    # Fetch repository data (README, license)
-    print("\nFetching repository data...")
-    model.fetch_repo_data()
+    """Tests Delete if needed
+    model_url = "https://huggingface.co/openbmb/VoxCPM-0.5B"
 
-    print("Author:", model.hf_metadata.get("author", "Unknown"))
-    print("Downloads:", model.hf_metadata.get("downloads", 0))
-    print("Likes", model.hf_metadata.get("likes", 0))
-    print("Pipeline tag:", model.hf_metadata.get("pipeline_tag", "Unknown"))
-    print("License:", model.repo_data.get("license", "unknown"))
+    model = Model(model_url)
+    model.fetch_metadata()
+    model.fetch_readme()
+
+    print(f"Model Name: {model.name}")
+    print(f"License: {model.get_license()}")
+    print(f"Total Size: {model.get_size():.3f} GB")
     """
 
 if __name__ == "__main__":

@@ -11,6 +11,8 @@ def main():
     print(f"Model Name: {model.name}")
     print(f"License: {model.get_license()}")
     print(f"Total Size: {model.get_size():.3f} GB")
+    print(f"Perf Claims: {model.has_perf_claims(["accuracy", "precision", "performance", "benchmark"])}")
+    print(f"Ramp Up: {model.has_ramp_up(["hi333333333333333333333"])}")
     """
 
 if __name__ == "__main__":

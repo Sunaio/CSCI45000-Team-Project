@@ -1,4 +1,5 @@
 import requests
+import re
 from typing import Optional
 from huggingface_hub import HfApi, ModelInfo
 
@@ -65,3 +66,29 @@ class Model:
 
         # Bytes -> Gb
         return total_bytes / (1024**3)
+    
+    # Return true if model readme has certain performance claims keywords
+    def has_perf_claims(self, kw: list[str]) -> bool:
+        text = self.readme_data.lower()
+        if not text.strip():
+            return False
+        
+        for k in kw:
+            word = r"\b" + re.escape(k.lower()) + r"\b"
+            if(re.search(word, text)):
+                return True
+        
+        return False
+    
+    # Return true if model readme has certain ramp up keywords (anything that helps user get started)
+    def has_ramp_up(self, kw: list[str]) -> bool:
+        text = self.readme_data.lower()
+        if not text.strip():
+            return False
+      
+        for k in kw:
+            word = r"\b" + re.escape(k.lower()) + r"\b"
+            if(re.search(word, text)):
+                return True
+        
+        return False

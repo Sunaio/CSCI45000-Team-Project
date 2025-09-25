@@ -1,27 +1,46 @@
 import requests
 import re
-from typing import Optional
+from typing import Optional, Dict
 from huggingface_hub import HfApi, ModelInfo
+from strip import strip_html, strip_markdown
 
 class Model:
     def __init__(self, code_url: str, dataset_url:str , model_url:str):
         self.code_url: str = code_url
         self.dataset_url: str = dataset_url
         self.model_url: str = model_url
-        self.model_name: str = self.get_model_name(self.model_url)
-        self.category: str
+        self.model_name: str = self.get_name(model_url, "model")
+
         self.file_size_types: tuple[str, ...] = (".bin", ".safetensors")
         self.metadata: Optional[ModelInfo] = None
         self.api = HfApi()
+
+        self.code_dict: Dict[str, str] = {"name": self.get_name(code_url, "code"), "url": self.code_url, "type": "code"}
+        self.dataset_dict: Dict[str, str] = {"name": self.get_name(dataset_url, "dataset"), "url": self.dataset_url, "type": "dataset"}
+        self.model_dict: Dict[str, str] = {"name": self.model_name, "url": self.model_url, "type": "model"}
+
         self.datasets: list[str] = []
-        
         if dataset_url:
             self.add_dataset(dataset_url)
 
-    # Model Name
-    def get_model_name(self, url: str) -> str:
-        model_name = self.model_url.split("huggingface.co/")[-1].replace("tree/main", "").strip("/")
-        return model_name
+    # Extract name from URL
+    def get_name(self, url: str, type: str) -> str:
+        if not url:
+            return ""
+
+        url = url.rstrip("/")
+
+        if type == "code":
+            return url.split("github.com/")[-1].replace("tree/main", "").strip("/")
+        elif type == "model":
+            return url.split("huggingface.co/")[-1].replace("tree/main", "").strip("/")
+        elif type == "dataset":
+            if "huggingface.co" in url:
+                return url.split("huggingface.co/datasets")[-1].replace("tree/main", "").strip("/")
+        else:
+            return url.split("/")[-1]
+
+        return "unknown"
 
     # HF API fetch
     def fetch_metadata(self) -> None:
@@ -46,12 +65,23 @@ class Model:
         if not url:
             return ""
 
-        readme_url = url.replace("tree/main", "raw/main/README.md")
+        if url_type in ["model", "dataset"] and "huggingface.co" in url:
+            if self.metadata and getattr(self.metadata, "cardData", None):
+                readme_text = self.metadata.cardData.get("readme", "")
+                if readme_text:
+                    # Strip HTML/Markdown
+                    clean_text = strip_html(readme_text)
+                    clean_text = strip_markdown(clean_text)
+                    return clean_text
         
+        readme_url = url.replace("tree/main", "raw/main/README.md")
+
         try:
             res = requests.get(readme_url, timeout=10)
-            readme_text = res.text if res.status_code == 200 else ""
-            return readme_text
+            readme_text = res.text
+            clean_text = strip_html(readme_text)
+            clean_text = strip_markdown(clean_text)
+            return clean_text
         except Exception as e:
             print("Error fetching readme {e}")
             return ""
@@ -85,11 +115,20 @@ class Model:
         text = self.fetch_readme(readme_type).lower()
         if not text.strip():
             return False
+        
         for k in kw:
             word = r"\b" + re.escape(k.lower()) + r"\b"
             if re.search(word, text):
                 return True
         return False
+    
+    # Number of words in README
+    def len_readme(self, readme_type: str) -> int:
+        text = self.fetch_readme(readme_type)
+        if not text:
+            return 0
+        
+        return len(text.split())
 
     # Add dataset url to list for tracking
     def add_dataset(self, dataset_url: str) -> None:

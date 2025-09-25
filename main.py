@@ -2,10 +2,10 @@ from model import Model
 
 # Main
 def main():
-    """Testing functionally/example of how to use model, make sure to delete before turning it in
+    """Testing functionally/example of how to use model, make sure to delete before turning it in"""
     m = Model(
     code_url="https://github.com/google-research/bert",
-    dataset_url="https://huggingface.co/datasets/bookcorpus/bookcorpus",
+    dataset_url="https://archive.ics.uci.edu/dataset/53/iris",
     model_url="https://huggingface.co/google-bert/bert-base-uncased"
     )
 
@@ -20,7 +20,7 @@ def main():
     print("Length Code README: ", m.len_readme("code"))
     print("Length Dataset README: ", m.len_readme("dataset"))
     print("Length Model README: ", m.len_readme("model"))
-    """
+    
 
 if __name__ == "__main__":
     main()

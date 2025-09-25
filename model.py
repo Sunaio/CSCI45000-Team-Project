@@ -37,8 +37,8 @@ class Model:
         elif type == "dataset":
             if "huggingface.co" in url:
                 return url.split("huggingface.co/datasets")[-1].replace("tree/main", "").strip("/")
-        else:
-            return url.split("/")[-1]
+            else:
+                return url.split("/")[-1]
 
         return "unknown"
 
@@ -74,7 +74,11 @@ class Model:
                     clean_text = strip_markdown(clean_text)
                     return clean_text
         
-        readme_url = url.replace("tree/main", "raw/main/README.md")
+        if "github.com" in url:
+            readme_url = url.replace("tree/main", "raw/main/README.md")
+        else:
+            # External dataset / other sites
+            readme_url = url
 
         try:
             res = requests.get(readme_url, timeout=10)
@@ -93,6 +97,7 @@ class Model:
             license_name = card_data.get("license_name") or card_data.get("license")
             if license_name:
                 return license_name
+            
         return "Unknown"
 
     # Size of model
@@ -108,6 +113,7 @@ class Model:
                     total_bytes += size
                 except Exception as e:
                     print(f"Error fetching size for {filename}: {e}")
+
         return total_bytes / (1024**3)
 
     # Check README for keywords
@@ -120,6 +126,7 @@ class Model:
             word = r"\b" + re.escape(k.lower()) + r"\b"
             if re.search(word, text):
                 return True
+            
         return False
     
     # Number of words in README

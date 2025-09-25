@@ -1,19 +1,18 @@
 from model import Model
 
 def main():
-    """Tests Delete if needed
-    model_url = "https://huggingface.co/openbmb/VoxCPM-0.5B"
+    m = Model(
+    code_url="https://github.com/google-research/bert",
+    dataset_url="https://huggingface.co/datasets/bookcorpus/bookcorpus",
+    model_url="https://huggingface.co/google-bert/bert-base-uncased"
+    )
 
-    model = Model(model_url)
-    model.fetch_metadata()
-    model.fetch_readme()
-
-    print(f"Model Name: {model.name}")
-    print(f"License: {model.get_license()}")
-    print(f"Total Size: {model.get_size():.3f} GB")
-    print(f"Perf Claims: {model.has_perf_claims(["accuracy", "precision", "performance", "benchmark"])}")
-    print(f"Ramp Up: {model.has_ramp_up(["hi333333333333333333333"])}")
-    """
+    m.fetch_metadata()
+    print("Model:", m.model_name)
+    print("License:", m.get_license())
+    print("Size (GB):", m.get_size())
+    print("Has perf claims:", m.kw_check(["accuracy", "benchmark"], "model"))
+    print("Datasets:", m.datasets)
 
 if __name__ == "__main__":
     main()

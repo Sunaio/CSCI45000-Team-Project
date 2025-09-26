@@ -4,9 +4,9 @@ from model import Model
 def main():
     """Testing functionally/example of how to use model, make sure to delete before turning it in"""
     m = Model(
-    code_url="https://github.com/google-research/bert",
-    dataset_url="https://archive.ics.uci.edu/dataset/53/iris",
-    model_url="https://huggingface.co/google-bert/bert-base-uncased"
+    code_url="",
+    dataset_url="",
+    model_url="https://huggingface.co/parvk11/audience_classifier_model"
     )
 
     m.fetch_metadata()
@@ -20,6 +20,7 @@ def main():
     print("Length Code README: ", m.len_readme("code"))
     print("Length Dataset README: ", m.len_readme("dataset"))
     print("Length Model README: ", m.len_readme("model"))
+    print("last mod: ", m.last_modified(20))
     
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ import re
 from typing import Optional, Dict
 from huggingface_hub import HfApi, ModelInfo
 from strip import strip_html, strip_markdown
+from datetime import datetime, timedelta
 
 class Model:
     def __init__(self, code_url: str, dataset_url:str , model_url:str):
@@ -78,7 +79,8 @@ class Model:
             readme_url = url.replace("tree/main", "raw/main/README.md")
         else:
             # External dataset / other sites
-            readme_url = url
+            readme_text = "External"
+            return readme_text
 
         try:
             res = requests.get(readme_url, timeout=10)
@@ -87,7 +89,7 @@ class Model:
             clean_text = strip_markdown(clean_text)
             return clean_text
         except Exception as e:
-            print("Error fetching readme {e}")
+            print(f"Error fetching readme: {e}")
             return ""
 
     # Model licenses
@@ -119,7 +121,7 @@ class Model:
     # Check README for keywords
     def kw_check(self, kw: list[str], readme_type: str) -> bool:
         text = self.fetch_readme(readme_type).lower()
-        if not text.strip():
+        if not text.strip() or text == "External":
             return False
         
         for k in kw:
@@ -132,7 +134,7 @@ class Model:
     # Number of words in README
     def len_readme(self, readme_type: str) -> int:
         text = self.fetch_readme(readme_type)
-        if not text:
+        if not text or text == "External":
             return 0
         
         return len(text.split())

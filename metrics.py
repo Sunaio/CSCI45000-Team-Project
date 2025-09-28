@@ -16,9 +16,9 @@ class Metrics:
         return int(round(seconds * 1000.0))
 
     # Runs all metrics computations
-    def run(self, inputs: Dict[str, str]) -> Dict[str, float]:
+    def run(self) -> Dict[str, float]:
         return {
-            "name": self.mod.get_name("model"),
+            "name": self.mod.model_dict.get("name"),
             "category": "MODEL",
             **self.compute_net(),
             **self.compute_ramp_up(),
@@ -35,16 +35,16 @@ class Metrics:
         # License compatible with LGPLv2.1
         LGPLV21_COMPATIBLE_LICENSES = {
             "mit",
-            "apache-2.0",
+            "apache",
             "lgpl-2.1",
             "bsd-3-clause",
             "bsd-2-clause",
-            "mpl-2.0"
+            "mpl"
         }
 
         t0 = time.time()
-        license_str = self.mod.get_license()
-        license_score = 1.0 if (license_str and license_str.lower() in LGPLV21_COMPATIBLE_LICENSES) else 0.0
+        license_str = self.mod.get_license().lower()
+        license_score = 1.0 if any(l in license_str for l in LGPLV21_COMPATIBLE_LICENSES) else 0.0
         license_latency = self._ms(time.time() - t0)
 
         return {
@@ -63,7 +63,7 @@ class Metrics:
         t0 = time.time()
         size_gb = self.mod.get_size()
         size_score = {
-            dev: min(max(0.0, 1.0 - size_gb / limit), 1.0) if size_gb > 0 else 0.0
+            dev: round(min(max(0.0, 1.0 - size_gb / limit), 1.0), 2) if size_gb > 0 else 0.0
             for dev, limit in SIZE_THRESHOLDS_GB.items()
         }
 
@@ -88,7 +88,7 @@ class Metrics:
         
         MIN_WORDS_THRESHOLD = 50
         t0 = time.time()
-        readme_text = self.mod.get_readme("code").lower()
+        readme_text = self.mod.fetch_readme("code").lower()
         section_scores = []
 
         for section in RAMP_UP_SECTIONS:
@@ -107,7 +107,7 @@ class Metrics:
             else:
                 section_scores.append(0.0)
 
-        ramp_up_score = sum(section_scores) / len(section_scores) if section_scores else 0.0
+        ramp_up_score = round(sum(section_scores) / len(section_scores), 2) if section_scores else 0.0
         ramp_latency = self._ms(time.time() - t0)
 
         return {
@@ -118,7 +118,7 @@ class Metrics:
     def compute_perf_claims(self) -> Dict[str, float]:
         t0 = time.time()
         PERF_KWS = ["accuracy", "benchmark", "perplexity", "performance"]
-        readme_text = self.mod.get_readme("code").lower()
+        readme_text = self.mod.fetch_readme("code").lower()
         perf_score = 1.0 if any(kw in readme_text for kw in PERF_KWS) else 0.0
         perf_latency = self._ms(time.time() - t0)
 
@@ -148,8 +148,8 @@ class Metrics:
 
     def compute_ds_code(self) -> Dict[str, float]:
         t0 = time.time()
-        has_code = bool(self.mod.code_dict.get("url"))
-        has_ds = bool(self.mod.dataset_dict.get("url"))
+        has_code = bool(self.mod.code_dict)
+        has_ds = bool(self.mod.dataset_dict)
         ds_code_score = (float(has_code) + float(has_ds)) / 2.0
         ds_code_latency = self._ms(time.time() - t0)
 
@@ -206,8 +206,8 @@ class Metrics:
         else:
             repo_readme_point = 0.0
 
-        maintenance_point = 0.2 if self.mod.last_modified(180) else 0.0
-        code_quality_score = repo_readme_point + repo_readme_len + maintenance_point
+        maintenance_point = 0.2 if self.mod.last_modified("github", 180) else 0.0
+        code_quality_score = repo_readme_point + repo_readme_point + maintenance_point
         code_latency = self._ms(time.time() - t0)
 
         return {
@@ -249,7 +249,7 @@ class Metrics:
             code_quality * weights["code_quality"]
         )
 
-        net_score = min(net_score, 1.0)
+        net_score = round(min(net_score, 1.0), 2)
         net_score_latency = self._ms(time.time() - t0)
 
         return{

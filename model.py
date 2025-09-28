@@ -1,5 +1,7 @@
 import requests
 import re
+import os
+import json
 from typing import Optional, Dict
 from huggingface_hub import HfApi, ModelInfo
 from strip import strip_html, strip_markdown
@@ -143,3 +145,80 @@ class Model:
     def add_dataset(self, dataset_url: str) -> None:
         if dataset_url and dataset_url not in self.datasets:
             self.datasets.append(dataset_url)
+
+    # Check for last modified
+    def last_modified(self, type: str, days: int) -> bool:
+        if type == "huggingface":
+            if not self.metadata or not getattr(self.metadata, "lastModified", None):
+                return False
+            date = datetime.fromisoformat(self.metadata.lastModified.replace("Z", "+00:00"))
+            return datetime.now(date.tzinfo) - date < timedelta(days = days)
+        elif type == "github":
+            if not self.code_url or "github.com" not in self.code_url:
+                return False
+
+            try:
+                parts = self.code_url.rstrip("/").split("/")
+                owner = parts[-2]
+                repo = parts[-1]
+                api_url = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=1"
+
+                res = requests.get(api_url, timeout = 10)
+                if res.status_code != 200:
+                    return False
+
+                data = res.json()
+                if not data:
+                    return False
+
+                last_commit_date = datetime.fromisoformat(data[0]["commit"]["committer"]["date"].replace("Z", "+00:00"))
+                return datetime.now(last_commit_date.tzinfo) - last_commit_date < timedelta(days = days)
+            except Exception as e:
+                print(f"Error checking GitHub last modified: {e}")
+                return False
+    
+    # Get number of contributors
+    def get_contrib(self) -> int:
+        try:
+            contrib = self.api.list_contributors(self.model_name)
+            return len(contrib)
+        except Exception as e:
+            print(f"Error fetching contributors: {e}")
+            return 0
+        
+    # Get num of downloads
+    def get_downloads(self) -> int:
+        try:
+            down = getattr(self.metadata, "downloads", 0)
+            return down
+        except Exception as e:
+            print(f"Error fetching downloads: {e}")
+            return 0
+            
+    # Get stats for GitHub stars and forks through GitHub API
+    def get_git_stats(self) -> Dict[str, int]:
+        if not self.code_url or "github.com" not in self.code.url:
+            return {
+                "stars": 0,
+                "forks": 0
+            }
+        
+        try:
+            parts = self.code_url.rstrip("/").split("/")
+            owner = parts[-2]
+            repo = parts[-1]
+            api_url = f"https://api.github.com/repos/{owner}/{repo}"
+        
+            res = requests.get(api_url, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                return {
+                    "stars": data.get("stargazers_count", 0),
+                    "forks": data.get("forks_count", 0)
+                }
+            else:
+                print(f"GitHub API returned status {res.status_code}")
+                return {"stars": 0, "forks": 0}
+        except Exception as e:
+            print(f"Error fetching GitHub stats: {e}")
+            return {"stars": 0, "forks": 0}

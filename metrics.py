@@ -1,131 +1,258 @@
 # metrics.py
 from __future__ import annotations
-
 import time
 from typing import Dict
-
 from model import Model
 
+class Metrics:
+    def __init__(self, inputs: Dict[str, str]) -> None:
+        self.mod = Model(
+            code_url = inputs.get("code_url", ""),
+            dataset_url= inputs.get("dataset_url", ""),
+            model_url= inputs.get("model_url", "")
+        )
 
-# --- thresholds & keywords ---
-CODE_README_OK_WORDS = 100
-BUS_FACTOR_WORDS = 300
-DATASET_README_OK_WORDS = 100
+    def _ms(self, seconds: float) -> int:
+        return int(round(seconds * 1000.0))
 
-PERF_KWS = ["accuracy", "benchmark", "state-of-the-art", "sota", "f1", "bleu", "rouge", "perplexity"]
-DATASET_KWS = ["license", "download", "split", "train", "test", "validation"]
+    # Runs all metrics computations
+    def run(self, inputs: Dict[str, str]) -> Dict[str, float]:
+        return {
+            "name": self.mod.get_name("model"),
+            "category": "MODEL",
+            **self.compute_net(),
+            **self.compute_ramp_up(),
+            **self.compute_bus_factor(),
+            **self.compute_perf_claims(),
+            **self.compute_license(),
+            **self.compute_size(),
+            **self.compute_ds_code(),
+            **self.compute_ds_quality(),
+            **self.compute_code_quality(),
+        }
 
-SIZE_THRESHOLDS_GB: Dict[str, float] = {
-    "raspberry_pi": 0.5,
-    "jetson_nano": 1.0,
-    "desktop_pc": 6.0,
-    "aws_server": 15.0,
-}
+    def compute_license(self) -> Dict[str, float]:
+        # License compatible with LGPLv2.1
+        LGPLV21_COMPATIBLE_LICENSES = {
+            "mit",
+            "apache-2.0",
+            "lgpl-2.1",
+            "bsd-3-clause",
+            "bsd-2-clause",
+            "mpl-2.0"
+        }
 
+        t0 = time.time()
+        license_str = self.mod.get_license()
+        license_score = 1.0 if (license_str and license_str.lower() in LGPLV21_COMPATIBLE_LICENSES) else 0.0
+        license_latency = self._ms(time.time() - t0)
 
-def _ms(seconds: float) -> int:
-    return int(round(seconds * 1000.0))
+        return {
+            "license": license_score,
+            "license_latency": license_latency
+        }
 
+    def compute_size(self) -> Dict[str, float]:
+        SIZE_THRESHOLDS_GB: Dict[str, float] = {
+            "raspberry_pi": 0.5,
+            "jetson_nano": 1.0,
+            "desktop_pc": 6.0,
+            "aws_server": 15.0,
+        }
 
-def compute_metrics(m: Model) -> Dict[str, object]:
-    """
-    Compute all required metrics using only model.py methods.
-    All scores are 0 or 1. Latencies are ints in milliseconds.
-    """
+        t0 = time.time()
+        size_gb = self.mod.get_size()
+        size_score = {
+            dev: min(max(0.0, 1.0 - size_gb / limit), 1.0) if size_gb > 0 else 0.0
+            for dev, limit in SIZE_THRESHOLDS_GB.items()
+        }
 
-    # --- metadata ---
-    t0 = time.time()
-    m.fetch_metadata()
-    metadata_latency = _ms(time.time() - t0)
-    hf_ok = m.metadata is not None
+        size_latency = self._ms(time.time() - t0)
+        
+        return {
+            "size_score": size_score,
+            "size_score_latency": size_latency
+        }
 
-    # --- license ---
-    t0 = time.time()
-    license_str = m.get_license() if hf_ok else "Unknown"
-    license_latency = _ms(time.time() - t0)
-    license_score = 1.0 if (license_str and license_str.lower() != "unknown") else 0.0
+    def compute_ramp_up(self) -> Dict[str, float]:
+        RAMP_UP_SECTIONS = [
+            "install",
+            "installation",
+            "usage",
+            "example",
+            "quickstart",
+            "quick start",
+            "download",
+            "how to use"
+        ]
+        
+        MIN_WORDS_THRESHOLD = 50
+        t0 = time.time()
+        readme_text = self.mod.get_readme("code").lower()
+        section_scores = []
 
-    # --- size_score ---
-    t0 = time.time()
-    size_gb = m.get_size() if hf_ok else 0.0
-    size_latency = _ms(time.time() - t0)
-    size_score = {
-        dev: (1.0 if (size_gb > 0.0 and size_gb <= limit) else 0.0)
-        for dev, limit in SIZE_THRESHOLDS_GB.items()
-    }
+        for section in RAMP_UP_SECTIONS:
+            if section in readme_text:
+                idx = readme_text.index(section) + len(section)
+                after_text = readme_text[idx:]
+                next_idx = len(after_text)
+                for next_section in RAMP_UP_SECTIONS:
+                    ni = after_text.find(next_section)
+                    if ni != -1 and ni < next_idx:
+                        next_idx = ni
+                section_content = after_text[:next_idx].split()
+                meaningful_words = [w for w in section_content if w not in ("more", "information", "see", "docs")]
+                score = min(len(meaningful_words) / MIN_WORDS_THRESHOLD, 1.0)
+                section_scores.append(score)
+            else:
+                section_scores.append(0.0)
 
-    # --- ramp_up_time (code README) ---
-    t0 = time.time()
-    code_words = m.len_readme("code")
-    ramp_latency = _ms(time.time() - t0)
-    ramp_up_time = 1.0 if code_words >= CODE_README_OK_WORDS else 0.0
+        ramp_up_score = sum(section_scores) / len(section_scores) if section_scores else 0.0
+        ramp_latency = self._ms(time.time() - t0)
 
-    # --- bus_factor ---
-    bus_latency = ramp_latency  # reuse
-    bus_factor = 1.0 if code_words >= BUS_FACTOR_WORDS else 0.0
+        return {
+            "ramp_up_time": ramp_up_score,
+            "ramp_up_time_latency": ramp_latency
+        }
+    
+    def compute_perf_claims(self) -> Dict[str, float]:
+        t0 = time.time()
+        PERF_KWS = ["accuracy", "benchmark", "perplexity", "performance"]
+        readme_text = self.mod.get_readme("code").lower()
+        perf_score = 1.0 if any(kw in readme_text for kw in PERF_KWS) else 0.0
+        perf_latency = self._ms(time.time() - t0)
 
-    # --- performance_claims ---
-    t0 = time.time()
-    perf_claims = 1.0 if m.kw_check(PERF_KWS, "model") else 0.0
-    perf_latency = _ms(time.time() - t0)
+        return {
+            "performance_claims": perf_score,
+            "performance_claims_latency": perf_latency
+        }
 
-    # --- dataset_quality ---
-    t0 = time.time()
-    ds_words = m.len_readme("dataset")
-    ds_kws = m.kw_check(DATASET_KWS, "dataset")
-    ds_quality = 1.0 if (ds_words >= DATASET_README_OK_WORDS and ds_kws) else 0.0
-    ds_latency = _ms(time.time() - t0)
+    def compute_bus_factor(self) -> Dict[str, float]:
+        t0 = time.time()
+        num_contrib = self.mod.get_contrib()
+        if num_contrib >= 10:
+            bus_factor_score = 1.0
+        elif num_contrib < 10 and num_contrib >= 7:
+            bus_factor_score = 0.5
+        elif num_contrib < 7 and num_contrib >= 5:
+            bus_factor_score = 0.3
+        else:
+            bus_factor_score = 0.0
 
-    # --- dataset_and_code_score ---
-    t0 = time.time()
-    has_code = bool(m.code_dict.get("url"))
-    has_ds = bool(m.dataset_dict.get("url"))
-    ds_code_score = 1.0 if (has_code and has_ds and code_words > 0 and ds_words > 0) else 0.0
-    ds_code_latency = _ms(time.time() - t0) + ramp_latency + ds_latency
+        bus_latency = self._ms(time.time() - t0)
 
-    # --- availability_score ---
-    t0 = time.time()
-    availability = 1.0 if (hf_ok or code_words > 0 or ds_words > 0) else 0.0
-    avail_latency = _ms(time.time() - t0) + metadata_latency
+        return {
+            "bus_factor": bus_factor_score,
+            "bus_factor_latency": bus_latency
+        }
 
-    # --- net_score (strict AND) ---
-    core = [
-        license_score,
-        max(size_score.values() or [0.0]),
-        ramp_up_time,
-        bus_factor,
-        availability,
-    ]
-    net_score = 1.0 if all(v == 1.0 for v in core) else 0.0
-    net_latency = license_latency + size_latency + ramp_latency + bus_latency + avail_latency
+    def compute_ds_code(self) -> Dict[str, float]:
+        t0 = time.time()
+        has_code = bool(self.mod.code_dict.get("url"))
+        has_ds = bool(self.mod.dataset_dict.get("url"))
+        ds_code_score = (float(has_code) + float(has_ds)) / 2.0
+        ds_code_latency = self._ms(time.time() - t0)
 
-    return {
-        "name": m.model_dict.get("name") or m.dataset_dict.get("name") or m.code_dict.get("name") or "unknown",
-        "category": "MODEL",
-        "net_score": float(net_score),
-        "net_score_latency": int(net_latency),
+        return {
+            "dataset_and_code_score": ds_code_score,
+            "dataset_and_code_score_latency": ds_code_latency
+        }
+    
+    def compute_ds_quality(self) -> Dict[str, float]:
+        t0 = time.time()
+        ds_readme_len = self.mod.len_readme("dataset")
+        if ds_readme_len >= 820:
+            ds_readme_point = 0.3
+        else:
+            ds_readme_point = 0.0
 
-        "ramp_up_time": float(ramp_up_time),
-        "ramp_up_time_latency": int(ramp_latency),
+        ds_downloads = self.mod.get_downloads()
+        if ds_downloads >= 100000:
+            ds_download_point = 0.2
+        elif ds_downloads < 100000 and ds_downloads >= 50000:
+            ds_download_point = 0.15
+        else:
+            ds_download_point = 0.0
 
-        "bus_factor": float(bus_factor),
-        "bus_factor_latency": int(bus_latency),
+        DATASET_KWS = ["license", "download", "split", "train", "test", "validation"]
+        ds_kw_point = 0.5 if self.mod.kw_check(DATASET_KWS, "dataset") else 0.0
 
-        "performance_claims": float(perf_claims),
-        "performance_claims_latency": int(perf_latency),
+        ds_quality_score = ds_readme_point + ds_download_point + ds_kw_point
+        ds_quality_latency = self._ms(time.time() - t0)
 
-        "license": float(license_score),
-        "license_latency": int(license_latency),
+        return {
+            "dataset_quality": ds_quality_score,
+            "dataset_quality_latency": ds_quality_latency
+        }
 
-        "size_score": {k: float(v) for k, v in size_score.items()},
-        "size_score_latency": int(size_latency),
+    def compute_code_quality(self) -> Dict[str, float]:
+        t0 = time.time()
+        repo_stats = self.mod.get_git_stats()
+        repo_readme_len = self.mod.len_readme("code")
+        if repo_stats.get("stars", 0) >= 10000:
+            repo_stats_point = 0.1
+        else:
+            repo_stats_point = 0.0
 
-        "dataset_and_code_score": float(ds_code_score),
-        "dataset_and_code_score_latency": int(ds_code_latency),
+        if repo_stats.get("forks", 0) >= 5000:
+            repo_stats_point += 0.1
+        else:
+            repo_stats_point += 0.0
 
-        "dataset_quality": float(ds_quality),
-        "dataset_quality_latency": int(ds_latency),
+        if repo_readme_len >= 1700:
+            repo_readme_point = 0.3
+        elif repo_readme_len < 1700 and repo_readme_len >= 1000:
+            repo_readme_point = 0.2
+        else:
+            repo_readme_point = 0.0
 
-        "availability_score": float(availability),
-        "availability_score_latency": int(avail_latency),
-    }
+        maintenance_point = 0.2 if self.mod.last_modified(180) else 0.0
+        code_quality_score = repo_readme_point + repo_readme_len + maintenance_point
+        code_latency = self._ms(time.time() - t0)
+
+        return {
+            "code_quality": code_quality_score,
+            "code_quality_latency": code_latency
+        }
+
+        
+    def compute_net(self) -> Dict[str, float]:
+        t0 = time.time()
+        weights = {
+            "license": 0.2,
+            "size": 0.1,
+            "ramp": 0.12,
+            "bus": 0.12,
+            "perf": 0.1,
+            "ds_code": 0.1,
+            "ds_quality": 0.13,
+            "code_quality": 0.13
+        }
+        # Get scores
+        license_score = self.compute_license()["license"]
+        size_score = min(self.compute_size()["size_score"].values())
+        ramp_score = self.compute_ramp_up()["ramp_up_time"]
+        bus_score = self.compute_bus_factor()["bus_factor"]
+        perf_score = self.compute_perf_claims()["performance_claims"]
+        ds_code_score = self.compute_ds_code()["dataset_and_code_score"]
+        ds_quality = self.compute_ds_quality()["dataset_quality"]
+        code_quality = self.compute_code_quality()["code_quality"]
+
+        net_score = (
+            license_score * weights["license"] +
+            size_score * weights["size"] +
+            ramp_score * weights["ramp"] +
+            bus_score * weights["bus"] +
+            perf_score * weights["perf"] +
+            ds_code_score * weights["ds_code"] +
+            ds_quality * weights["ds_quality"] +
+            code_quality * weights["code_quality"]
+        )
+
+        net_score = min(net_score, 1.0)
+        net_score_latency = self._ms(time.time() - t0)
+
+        return{
+            "net_score": net_score,
+            "net_score_latency": net_score_latency
+        }

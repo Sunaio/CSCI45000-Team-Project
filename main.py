@@ -21,7 +21,7 @@ def parse_input(path: str):
 
 
 def print_ndjson(obj: Dict[str, Any]) -> None:
-    print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+    print(json.dumps(obj, ensure_ascii=False))
 
 
 def run_tests():

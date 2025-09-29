@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+# ---- INSTALL ----
+if [ "$1" = "install" ]; then
+    if [ -f dependencies.txt ]; then
+        pip install -r dependencies.txt
+    fi
+    exit 0
+fi
+
+# ---- TEST ----
+if [ "$1" = "test" ]; then
+    pytest -q --disable-warnings
+    exit 0
+fi
+
+# ---- URLS ----
+if [ "$1" = "urls" ]; then
+    if [ -f urls.txt ]; then
+        cat urls.txt
+    else
+        echo "urls.txt not found" >&2
+        exit 1
+    fi
+    exit 0
+fi
+
+# ---- FALLBACK ----
+echo "Unknown command: $1"
+exit 1

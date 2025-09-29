@@ -6,6 +6,7 @@ import pytest
 from metrics import Metrics
 from typing import Dict, Any
 
+
 def parse_input(path: str):
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
@@ -18,24 +19,21 @@ def parse_input(path: str):
                 "model_url": parts[2] if len(parts) > 2 else ""
             }
 
+
 def print_ndjson(obj: Dict[str, Any]) -> None:
     print(json.dumps(obj, ensure_ascii=False))
 
+
 def run_tests():
-    result = pytest.main([
-        "tests/test.py",
+    # Let pytest handle reporting/exit codes
+    sys.exit(pytest.main([
+        "tests",
         "--cov=.",
-        "--cov-report=term",
-        "--tb=no"
-    ])
+        "--cov-report=term-missing",
+        "--disable-warnings",
+        "-q"
+    ]))
 
-    total_tests = 20
-    passed_tests = total_tests if result == 0 else total_tests - 2
-    coverage_percent = (passed_tests/total_tests) * 100
-
-    print(f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.")
-
-    sys.exit(0 if result == 0 else 1)
 
 def main(argv: list[str]) -> None:
     if len(argv) != 2:
@@ -46,23 +44,25 @@ def main(argv: list[str]) -> None:
 
     if cmd == "install":
         try:
-            subprocess.run(["pip", "install", "--user", "-r", "dependencies.txt"], check=True)
+            subprocess.run(["pip", "install", "-r", "dependencies.txt"], check=True)
             sys.exit(0)
         except subprocess.CalledProcessError:
             sys.exit(1)
+
     elif cmd == "test":
         run_tests()
+
     else:
         try:
-            inputs = list(parse_input(cmd))
-            for input_dict in inputs:
+            for input_dict in parse_input(cmd):
                 metrics = Metrics(input_dict)
-                result = metrics.run()  # no argument
+                result = metrics.run()
                 print_ndjson(result)
             sys.exit(0)
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
+
 
 if __name__ == "__main__":
     main(sys.argv)

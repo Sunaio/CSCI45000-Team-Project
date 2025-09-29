@@ -251,7 +251,7 @@ class Metrics:
             "code_quality": 0.13
         }
         license_score = scores["license"]
-        size_score = scores["size_score"]
+        size_score = min(scores["size_score"].values())
         ramp_score = scores["ramp_up_time"]
         bus_score = scores["bus_factor"]
         perf_score = scores["performance_claims"]

@@ -217,7 +217,7 @@ class Metrics:
         }
 
         
-    def compute_net(self, ) -> Dict[str, float]:
+    def compute_net(self, scores: Dict[str, float]) -> Dict[str, float]:
         t0 = time.time()
         weights = {
             "license": 0.2,

@@ -9,16 +9,14 @@ from typing import Dict, Any
 
 def parse_input(path: str):
     with open(path, "r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, 1):
+        for line in f:
             if not line.strip():
                 continue
             parts = [p.strip() for p in line.split(",")]
-            if len(parts) > 3:
-                raise ValueError(f"Line {line_no}: expected exactly 3 URLs, got {len(parts)}")
             yield {
-                "code_url": parts[0],
-                "dataset_url": parts[1],
-                "model_url": parts[2]
+                "code_url": parts[0] if len(parts) > 0 else "",
+                "dataset_url": parts[1] if len(parts) > 1 else "",
+                "model_url": parts[2] if len(parts) > 2 else ""
             }
 
 

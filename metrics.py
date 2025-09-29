@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from typing import Dict
 from model import Model
+from collections import OrderedDict
 
 class Metrics:
     def __init__(self, inputs: Dict[str, str]) -> None:
@@ -37,20 +38,30 @@ class Metrics:
         temp_scores.update(code_quality_res)
         net_res = self.compute_net(temp_scores)
 
-        format_results = {
-            "name": self.mod.model_dict.get("name"),
-            "category": "MODEL",
-            **net_res,
-            **ramp_res,
-            **bus_res,
-            **perf_res,
-            **license_res,
-            **size_res,
-            **ds_code_res,
-            **ds_quality_res,
-            **code_quality_res,
-        }
-    
+        format_results = OrderedDict([
+            ("name", self.mod.model_dict.get("name")),
+            ("category", "MODEL"),
+            ("net_score", net_res["net_score"]),
+            ("net_score_latency", net_res["net_score_latency"]),
+            ("ramp_up_time", ramp_res["ramp_up_time"]),
+            ("ramp_up_time_latency", ramp_res["ramp_up_time_latency"]),
+            ("bus_factor", bus_res["bus_factor"]),
+            ("bus_factor_latency", bus_res["bus_factor_latency"]),
+            ("performance_claims", perf_res["performance_claims"]),
+            ("performance_claims_latency", perf_res["performance_claims_latency"]),
+            ("license", license_res["license"]),
+            ("license_latency", license_res["license_latency"]),
+            ("size_score", size_res["size_score"]),
+            ("size_score_latency", size_res["size_score_latency"]),
+            ("dataset_and_code_score", ds_code_res["dataset_and_code_score"]),
+            ("dataset_and_code_score_latency", ds_code_res["dataset_and_code_score_latency"]),
+            ("dataset_quality", ds_quality_res["dataset_quality"]),
+            ("dataset_quality_latency", ds_quality_res["dataset_quality_latency"]),
+            ("code_quality", code_quality_res["code_quality"]),
+            ("code_quality_latency", code_quality_res["code_quality_latency"]),
+            ]
+        )
+
         return format_results
 
     def compute_license(self) -> Dict[str, float]:

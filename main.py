@@ -13,7 +13,7 @@ def parse_input(path: str):
             if not line.strip():
                 continue
             parts = [p.strip() for p in line.split(",")]
-            if len(parts) != 3:
+            if len(parts) > 3:
                 raise ValueError(f"Line {line_no}: expected exactly 3 URLs, got {len(parts)}")
             yield {
                 "code_url": parts[0],

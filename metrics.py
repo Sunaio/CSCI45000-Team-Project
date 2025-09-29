@@ -17,19 +17,41 @@ class Metrics:
 
     # Runs all metrics computations
     def run(self) -> Dict[str, float]:
-        results = {}
-        results["name"] = self.mod.model_dict.get("name")
-        results["category"] = self.mod.model_dict.get("category", "MODEL")
-        results.update(self.compute_net(results))
-        results.update(self.compute_ramp_up())
-        results.update(self.compute_bus_factor())
-        results.update(self.compute_perf_claims())
-        results.update(self.compute_license())
-        results.update(self.compute_size())
-        results.update(self.compute_ds_code())
-        results.update(self.compute_ds_quality())
-        results.update(self.compute_code_quality())
-        return results
+        license_res = self.compute_license()
+        size_res = self.compute_size()
+        ramp_res = self.compute_ramp_up()
+        bus_res = self.compute_bus_factor()
+        perf_res = self.compute_perf_claims()
+        ds_code_res = self.compute_ds_code()
+        ds_quality_res = self.compute_ds_quality()
+        code_quality_res = self.compute_code_quality()
+
+        temp_scores = {}
+        temp_scores.update(license_res)
+        temp_scores.update(size_res)
+        temp_scores.update(ramp_res)
+        temp_scores.update(bus_res)
+        temp_scores.update(perf_res)
+        temp_scores.update(ds_code_res)
+        temp_scores.update(ds_quality_res)
+        temp_scores.update(code_quality_res)
+        net_res = self.compute_net(temp_scores)
+
+        format_results = {
+            "name": self.mod.model_dict.get("name"),
+            "category": "MODEL",
+            **net_res,
+            **ramp_res,
+            **bus_res,
+            **perf_res,
+            **license_res,
+            **size_res,
+            **ds_code_res,
+            **ds_quality_res,
+            **code_quality_res,
+        }
+    
+        return format_results
 
     def compute_license(self) -> Dict[str, float]:
         # License compatible with LGPLv2.1

@@ -20,16 +20,15 @@ class Metrics:
         results = {}
         results["name"] = self.mod.model_dict.get("name")
         results["category"] = self.mod.model_dict.get("category", "MODEL")
-        results.update(self.compute_license())
-        results.update(self.compute_size())
+        results.update(self.compute_net(results))
         results.update(self.compute_ramp_up())
         results.update(self.compute_bus_factor())
         results.update(self.compute_perf_claims())
+        results.update(self.compute_license())
+        results.update(self.compute_size())
         results.update(self.compute_ds_code())
         results.update(self.compute_ds_quality())
         results.update(self.compute_code_quality())
-
-        results.update(self.compute_net(results))
         return results
 
     def compute_license(self) -> Dict[str, float]:

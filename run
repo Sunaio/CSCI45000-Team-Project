@@ -11,18 +11,13 @@ fi
 
 # ---- TEST ----
 if [ "$1" = "test" ]; then
-    pytest -q --disable-warnings
+    python3 -m pytest tests/test.py -q --disable-warnings
     exit 0
 fi
 
 # ---- URLS ----
-if [ "$1" = "urls" ]; then
-    if [ -f urls.txt ]; then
-        cat urls.txt
-    else
-        echo "urls.txt not found" >&2
-        exit 1
-    fi
+if [ -f "$1" ]; then
+    python3 main.py "$1"
     exit 0
 fi
 

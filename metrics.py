@@ -18,6 +18,8 @@ class Metrics:
     # Runs all metrics computations
     def run(self) -> Dict[str, float]:
         results = {}
+        results["name"] = self.mod.model_dict.get("name")
+        results["category"] = self.mod.model_dict.get("category", "MODEL")
         results.update(self.compute_license())
         results.update(self.compute_size())
         results.update(self.compute_ramp_up())
@@ -28,8 +30,6 @@ class Metrics:
         results.update(self.compute_code_quality())
 
         results.update(self.compute_net(results))
-        results["name"] = self.mod.model_dict.get("name")
-        results["category"] = self.mod.model_dict.get("category", "MODEL")
         return results
 
     def compute_license(self) -> Dict[str, float]:

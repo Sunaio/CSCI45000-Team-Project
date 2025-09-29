@@ -17,19 +17,20 @@ class Metrics:
 
     # Runs all metrics computations
     def run(self) -> Dict[str, float]:
-        return {
-            "name": self.mod.model_dict.get("name"),
-            "category": "MODEL",
-            **self.compute_net(),
-            **self.compute_ramp_up(),
-            **self.compute_bus_factor(),
-            **self.compute_perf_claims(),
-            **self.compute_license(),
-            **self.compute_size(),
-            **self.compute_ds_code(),
-            **self.compute_ds_quality(),
-            **self.compute_code_quality(),
-        }
+        results = {}
+        results.update(self.compute_license())
+        results.update(self.compute_size())
+        results.update(self.compute_ramp_up())
+        results.update(self.compute_bus_factor())
+        results.update(self.compute_perf_claims())
+        results.update(self.compute_ds_code())
+        results.update(self.compute_ds_quality())
+        results.update(self.compute_code_quality())
+
+        results.update(self.compute_net(results))
+        results["name"] = self.mod.model_dict.get("name")
+        results["category"] = self.mod.model_dict.get("category", "MODEL")
+        return results
 
     def compute_license(self) -> Dict[str, float]:
         # License compatible with LGPLv2.1
@@ -207,7 +208,7 @@ class Metrics:
             repo_readme_point = 0.0
 
         maintenance_point = 0.2 if self.mod.last_modified("github", 180) else 0.0
-        code_quality_score = repo_readme_point + repo_readme_point + maintenance_point
+        code_quality_score = repo_stats_point + repo_readme_point + maintenance_point
         code_latency = self._ms(time.time() - t0)
 
         return {
@@ -216,7 +217,7 @@ class Metrics:
         }
 
         
-    def compute_net(self) -> Dict[str, float]:
+    def compute_net(self, ) -> Dict[str, float]:
         t0 = time.time()
         weights = {
             "license": 0.2,
@@ -228,15 +229,14 @@ class Metrics:
             "ds_quality": 0.13,
             "code_quality": 0.13
         }
-        # Get scores
-        license_score = self.compute_license()["license"]
-        size_score = min(self.compute_size()["size_score"].values())
-        ramp_score = self.compute_ramp_up()["ramp_up_time"]
-        bus_score = self.compute_bus_factor()["bus_factor"]
-        perf_score = self.compute_perf_claims()["performance_claims"]
-        ds_code_score = self.compute_ds_code()["dataset_and_code_score"]
-        ds_quality = self.compute_ds_quality()["dataset_quality"]
-        code_quality = self.compute_code_quality()["code_quality"]
+        license_score = scores["license"]
+        size_score = min(scores["size_score"].values())
+        ramp_score = scores["ramp_up_time"]
+        bus_score = scores["bus_factor"]
+        perf_score = scores["performance_claims"]
+        ds_code_score = scores["dataset_and_code_score"]
+        ds_quality = scores["dataset_quality"]
+        code_quality = scores["code_quality"]
 
         net_score = (
             license_score * weights["license"] +

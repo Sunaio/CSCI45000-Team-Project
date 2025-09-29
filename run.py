@@ -25,14 +25,14 @@ def print_ndjson(obj: Dict[str, Any]) -> None:
 
 
 def run_tests():
-    # Let pytest handle reporting/exit codes
-    sys.exit(pytest.main([
-        "tests",
+    exit_code = pytest.main([
+        "tests",       
         "--cov=.",
         "--cov-report=term-missing",
         "--disable-warnings",
         "-q"
-    ]))
+    ])
+    sys.exit(exit_code)
 
 
 def main(argv: list[str]) -> None:
@@ -44,9 +44,10 @@ def main(argv: list[str]) -> None:
 
     if cmd == "install":
         try:
-            subprocess.run(["pip", "install", "-r", "dependencies.txt"], check=True)
+            subprocess.run(["python3", "-m", "pip", "install", "-r", "dependencies.txt"], check=True)
             sys.exit(0)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            print(f"Install failed: {e}", file=sys.stderr)
             sys.exit(1)
 
     elif cmd == "test":
@@ -60,7 +61,7 @@ def main(argv: list[str]) -> None:
                 print_ndjson(result)
             sys.exit(0)
         except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
+            print(f"Error processing URL file: {e}", file=sys.stderr)
             sys.exit(1)
 
 

@@ -34,20 +34,20 @@ Example Output if './run URL_FILE' was done correctly:
 
 ## Project Structure
 CSCI45000-Team-Project/
--├── model.py        # Handles all data fetches (licenses, sizes, READMEs, datasets, etc)
--├── metrics.py      # Computes and handle how metrics are calculated
--├── main.py         # CLI entry point, parses input file and prints results
--├── run             # Helper script for Linux execution
--├── tests/          # Directory containing all test files
--│ └── test.py       # Unit tests for Model and Metrics
--└── README.md       # Project documentation
+- ├── model.py        # Handles all data fetches (licenses, sizes, READMEs, datasets, etc)
+- ├── metrics.py      # Computes and handle how metrics are calculated
+- ├── main.py         # CLI entry point, parses input file and prints results
+- ├── run             # Helper script for Linux execution
+- ├── tests/          # Directory containing all test files
+- │ └── test.py       # Unit tests for Model and Metrics
+- └── README.md       # Project documentation
 
 ## Metric Weights
--'License': 0.2 | 20%,
--'Dataset Quality': 0.13 | 13%,
--'Code Quality': 0.13 | 13%,
--'Ramp Up Time': 0.12 | 12%,
--'Bus Factor': 0.12 | 12%,
--'Size': 0.1 | 10%,
--'Performance Claims': 0.1 | 10%,
--'Dataset and Code': 0.1 | 10%,
+- **License**: 0.2 | 20%  
+- **Dataset Quality**: 0.13 | 13%  
+- **Code Quality**: 0.13 | 13%  
+- **Ramp Up Time**: 0.12 | 12%  
+- **Bus Factor**: 0.12 | 12%  
+- **Size**: 0.1 | 10%  
+- **Performance Claims**: 0.1 | 10%  
+- **Dataset and Code**: 0.1 | 10% 

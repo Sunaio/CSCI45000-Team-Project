@@ -15,7 +15,7 @@ Given a text file of URLs, the tool:
 Windows/IDE Terminal:
 - Run 'python main.py install' or 'python3 main.py install'
 
-Linux/Unix:
+Linux:
 - Run './run install'
   
 This will download all dependencies required for this program. Make sure to have Python install on your machine.
@@ -25,7 +25,7 @@ Windows/IDE Terminal:
 - Run 'python main.py test' or 'python3 main.py test' for test execution
 - Run 'python main.py URL_FILE' or 'python3 main.py URL_FILE' where 'URL_FILE' is the absolute location of the text file that contains all the URLS.
 
-Linux/Unix:
+Linux:
 - Run './run test' for test execution
 - Run './run URL_FILE' where 'URL_FILE' is the absolute location of the text file that contains all the URLS.
 
@@ -37,7 +37,17 @@ CSCI45000-Team-Project/
 ├── model.py        # Handles all data fetches (licenses, sizes, READMEs, datasets, etc)
 ├── metrics.py      # Computes and handle how metrics are calculated
 ├── main.py         # CLI entry point, parses input file and prints results
-├── run             # Helper script for Linux/Unix execution
+├── run             # Helper script for Linux execution
 ├── tests/          # Directory containing all test files
 │ └── test.py       # Unit tests for Model and Metrics
 └── README.md       # Project documentation
+
+## Metric Weights
+'License': 0.2 | 20%,
+'Dataset Quality': 0.13 | 13%,
+'Code Quality': 0.13 | 13%,
+'Ramp Up Time': 0.12 | 12%,
+'Bus Factor': 0.12 | 12%,
+'Size': 0.1 | 10%,
+'Performance Claims': 0.1 | 10%,
+'Dataset and Code': 0.1 | 10%,
